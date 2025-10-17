@@ -208,3 +208,7 @@ __marimo__/
 
 #copilot instructions
 copilot-instructions.md
+
+#.csv
+*.csv
+toolwindow_data.csv
