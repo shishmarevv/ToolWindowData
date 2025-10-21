@@ -1,7 +1,10 @@
 import csv
+import os
 import threading
 import queue
 import sqlite3
+
+from pathlib import Path
 
 producer_queue: queue.Queue[dict] = queue.Queue(maxsize=200)
 writer_queue: queue.Queue[tuple] = queue.Queue(maxsize=200)
@@ -127,3 +130,19 @@ def run(csv_path: str, db_path: str, batch_size: int = 100, workers_count: int =
         w.join()
 
     write.join()
+
+def resolve_paths():
+    root = Path(__file__).resolve().parent.parent
+
+    default_csv_path = root / "data" / "toolwindow_data.csv"
+    default_db_path = root / "data" / "toolwindow.db"
+
+    csv_path = Path(os.getenv("CSV_PATH"), str(default_csv_path))
+    db_path = Path(os.getenv("DB_PATH"), str(default_db_path))
+
+    return csv_path, db_path
+
+if __name__ == '__main__':
+    csv_path, db_path = resolve_paths()
+
+    run(str(csv_path), str(db_path), 100, 4)
