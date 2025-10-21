@@ -29,20 +29,20 @@ def check_type(type_: str):
 
 
 def load_event(row: dict):
-    if not row or all(not c for c in row):
+    if not row or all(not v for v in row.values()):
         return None
     try:
-        timestamp_raw = row['timestamp'] if row['timestamp'] else None
+        timestamp_raw = row['timestamp'] if row.get('timestamp') else None
         timestamp = int(timestamp_raw)
-    except ValueError:
+    except (ValueError, TypeError):
         return None
 
-    event = check_event(row['event']) if row['event'] else None
-    type_ = check_type(row['open_type']) if row['open_type'] else None
+    event = check_event(row.get('event')) if row.get('event') else None
+    type_ = check_type(row.get('open_type')) if row.get('open_type') else None
 
     try:
-        user_id = int(row['user_id']) if row['user_id'] else None
-    except ValueError:
+        user_id = int(row['user_id']) if row.get('user_id') else None
+    except (ValueError, TypeError):
         return None
 
     result = (timestamp, event, type_, user_id)
@@ -76,7 +76,7 @@ def writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
     conn.execute("PRAGMA synchronous=OFF;")
 
     sql = """
-        INSERT INTO events (timestamp, event, type, user_id)
+        INSERT OR IGNORE INTO events (timestamp, event, type, user_id)
         VALUES (?, ?, ?, ?)
     """
 

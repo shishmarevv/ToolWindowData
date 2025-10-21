@@ -39,6 +39,9 @@ CREATE INDEX IF NOT EXISTS idx_action_timestamp ON events(timestamp, type);
 CREATE INDEX IF NOT EXISTS idx_event_type ON events(type);
 CREATE INDEX IF NOT EXISTS idx_event ON events(id);
 
+CREATE UNIQUE INDEX IF NOT EXISTS ux_events_dedupe
+ON events(user_id, timestamp, event, COALESCE(type, ''));
+
 CREATE INDEX IF NOT EXISTS idx_clear_action_start ON clear(type, start);
 CREATE INDEX IF NOT EXISTS idx_clear_start ON clear(start);
 
