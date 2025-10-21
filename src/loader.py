@@ -135,10 +135,10 @@ def resolve_paths():
     root = Path(__file__).resolve().parent.parent
 
     default_csv_path = root / "data" / "toolwindow_data.csv"
-    default_db_path = root / "data" / "toolwindow.db"
+    default_db_path = root / "database" / "toolwindow.db"
 
-    csv_path = Path(os.getenv("CSV_PATH"), str(default_csv_path))
-    db_path = Path(os.getenv("DB_PATH"), str(default_db_path))
+    csv_path = Path(os.getenv("CSV_PATH", str(default_csv_path)))
+    db_path = Path(os.getenv("DB_PATH", str(default_db_path)))
 
     return csv_path, db_path
 
