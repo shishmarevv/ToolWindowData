@@ -48,7 +48,7 @@ def load_event(row: dict):
     # Валидация: если event невалиден, отбрасываем строку
     if event is None:
         return None
-
+    
     # Валидация: если user_id невалиден, отбрасываем строку
     if user_id is None:
         return None

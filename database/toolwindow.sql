@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS anomaly (
                                             'null_type',
                                             'closed_not_null_type',
                                             'negative_duration',
-                                            'zero_duration') ),
+                                            '>12h_duration') ),
     FOREIGN KEY(counterparty_event_id) REFERENCES events(id),
     FOREIGN KEY(event_id) REFERENCES events(id)
 );

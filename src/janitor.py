@@ -88,10 +88,18 @@ def check_events(events: list):
                     anomalies.append((open_type, timestamp, open_id, event_id, 'negative_duration'))
                     state = None
                 elif timestamp > open_ts:
-                    clean.append((open_type, open_ts, timestamp, open_id, event_id))
+                    # Calculate duration in hours
+                    duration_ms = timestamp - open_ts
+                    duration_hours = duration_ms / 1000 / 60 / 60
+
+                    # Filter episodes longer than 12 hours as anomalies
+                    if duration_hours > 12:
+                        anomalies.append((open_type, open_ts, open_id, event_id, '>12h_duration'))
+                    else:
+                        clean.append((open_type, open_ts, timestamp, open_id, event_id))
                     state = None
                 else:
-                    # Нулевая длительность - записываем как валидную пару
+                    # Zero duration - still valid pair
                     clean.append((open_type, open_ts, timestamp, open_id, event_id))
                     state = None
 
