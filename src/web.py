@@ -5,16 +5,12 @@ Uses FastAPI to create interactive report with plots.
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-import sys
 
-# Add path to science module
-sys.path.insert(0, str(Path(__file__).parent))
-
-from science import analyze_data
-from logger import get_logger
+from .science import analyze_data
+from .logger import get_logger
+from . import resolver
 
 logger = get_logger(__name__)
 
@@ -30,32 +26,51 @@ analysis_cache = None
 def get_analysis_results():
     """
     Gets analysis results (caches for performance).
+    Protected from exceptions: logs error and returns None on failure.
     """
-        logger.info("Running analysis for the first time")
     global analysis_cache
 
     if analysis_cache is None:
-        logger.info("Analysis cached successfully")
-        db_path = Path(__file__).parent.parent / 'database' / 'toolwindow.db'
-        # Run analysis with plots
-        analysis_cache = analyze_data(str(db_path), create_plots=True)
+        logger.info("Running analysis for the first time")
+        db_path = resolver.db_path()
+
+        # Check if database exists
+        if not Path(db_path).exists():
+            logger.error(f"Database file not found: {db_path}")
+            return None
+
+        try:
+            # Run analysis with plots
+            analysis_cache = analyze_data(db_path, create_plots=True)
+            logger.info("Analysis cached successfully")
+        except Exception:
+            logger.exception("Failed to run analysis")
+            return None
 
     return analysis_cache
 
 
-    logger.info("Home page requested")
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """
-        logger.error("Failed to load analysis results")
     Home page with analysis results.
     """
-    results = get_analysis_results()
+    logger.info("Home page requested")
 
-    if not results:
+    try:
+        results = get_analysis_results()
+    except Exception:
+        logger.exception("Error getting analysis results")
         return templates.TemplateResponse("error.html", {
             "request": request,
-            "error": "Failed to load data for analysis"
+            "error": "Internal error while loading analysis data. Check logs for details."
+        })
+
+    if not results:
+        logger.error("Failed to load analysis results")
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": "Failed to load data for analysis. Database may be missing or inaccessible."
         })
 
     # Format data for template
@@ -92,19 +107,19 @@ async def get_analysis_api():
         "test": results['test'],
         "effect_size": results['effect_size']
     }
-    logger.info("Refresh analysis requested")
 
 
-
+@app.post("/api/refresh")
 async def refresh_analysis():
-
-    logger.info("Analysis refreshed successfully")
+    """
     Refreshes analysis cache (recalculates results).
     """
+    logger.info("Refresh analysis requested")
     global analysis_cache
     analysis_cache = None
 
     results = get_analysis_results()
+    logger.info("Analysis refreshed successfully")
 
     return {
         "status": "success",

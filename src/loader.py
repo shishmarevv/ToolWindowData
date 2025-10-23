@@ -1,19 +1,26 @@
+# python
+# File: src/loader.py
+"""
+CSV to SQLite data loader with multithreading.
+Uses producer-consumer pattern for efficient batch processing.
+"""
 import csv
 import threading
 import queue
 import sqlite3
-import resolver
-
-from logger import get_logger
+from . import resolver
+from .logger import get_logger
 
 logger = get_logger(__name__)
 
+# Queues for threading pipeline
 producer_queue: queue.Queue[dict] = queue.Queue(maxsize=200)
 writer_queue: queue.Queue[tuple] = queue.Queue(maxsize=200)
 
-SENTINEL = None
+SENTINEL = None  # Signal to stop workers
 
 def check_event(event: str):
+    """Validate and normalize event type."""
     if not event:
         return None
     event = event.strip().lower()
@@ -22,6 +29,7 @@ def check_event(event: str):
     return None
 
 def check_type(type_: str):
+    """Validate and normalize open type."""
     if not type_:
         return None
     type_ = type_.strip().lower()
@@ -31,6 +39,7 @@ def check_type(type_: str):
 
 
 def load_event(row: dict):
+    """Parse and validate CSV row, return tuple for DB insertion or None if invalid."""
     if not row or all(not v for v in row.values()):
         logger.warning("rows is empty")
         return None
@@ -58,6 +67,7 @@ def load_event(row: dict):
     return result
 
 def producer(csv_path :str):
+    """Read CSV file and push rows to producer queue."""
     with open(csv_path, "r", encoding="utf-8") as file:
         logger.info(f"Opening CSV file: {csv_path}")
         reader = csv.DictReader(file)
@@ -70,6 +80,7 @@ def producer(csv_path :str):
         logger.info(f"Finished reading CSV: {row_count} total rows")
 
 def worker():
+    """Process rows from producer queue, validate and push to writer queue."""
     while True:
         item = producer_queue.get()
         try:
@@ -86,6 +97,7 @@ def worker():
             producer_queue.task_done()
 
 def writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
+    """Batch write validated events to SQLite database."""
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA synchronous=OFF;")
@@ -94,12 +106,11 @@ def writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
 
     sql = """
         INSERT OR IGNORE INTO events (timestamp, event, type, user_id)
-    total_inserted = 0
+        VALUES (?, ?, ?, ?)
     """
 
     batch = []
     seen = 0
-    count = 0
 
     def flush():
         if not batch:
@@ -115,7 +126,7 @@ def writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
             try:
                 if item is SENTINEL:
                     seen += 1
-                    if seen >=workers_count:
+                    if seen >= workers_count:
                         break
                     continue
 
@@ -125,6 +136,7 @@ def writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
             finally:
                 writer_queue.task_done()
         flush()
+        logger.info("Writer finished")
     finally:
         conn.close()
 

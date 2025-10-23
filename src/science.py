@@ -10,7 +10,7 @@ from pathlib import Path
 from collections import defaultdict
 import io
 import base64
-import resolver
+from . import resolver
 
 # For statistical tests we use scipy
 try:

@@ -1,12 +1,16 @@
+"""
+Data cleaning module for tool window events.
+Matches open/close pairs, filters anomalies, reconstructs clean episodes.
+"""
 import threading
 import queue
 import sqlite3
-import resolver
-
-from logger import get_logger
+from . import resolver
+from .logger import get_logger
 
 logger = get_logger(__name__)
 
+# Queues for multithreaded cleaning pipeline
 producer_queue = queue.Queue(maxsize=200)
 clean_consumer_queue = queue.Queue(maxsize=200)
 anomaly_consumer_queue  = queue.Queue(maxsize=200)
@@ -14,6 +18,7 @@ anomaly_consumer_queue  = queue.Queue(maxsize=200)
 SENTINEL = None
 
 def get_users(db_path: str, batch: int = 100):
+    """Fetch distinct user IDs from database in batches."""
     with sqlite3.connect(db_path) as conn:
         cur = conn.cursor()
         cur.execute(
@@ -30,6 +35,7 @@ def get_users(db_path: str, batch: int = 100):
             yield [r[0] for r in rows]
 
 def get_events(db_path: str, user_id: int):
+    """Fetch all events for a specific user, ordered chronologically."""
     with sqlite3.connect(db_path) as conn:
         cur = conn.cursor()
         cur.execute(
@@ -47,6 +53,10 @@ def get_events(db_path: str, user_id: int):
         return rows
 
 def check_events(events: list, max_duration: int):
+    """
+    Match open/close pairs and detect anomalies.
+    Returns (clean_episodes, anomalies) tuples.
+    """
     clean = []
     anomalies = []
 
