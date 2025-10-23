@@ -1,10 +1,12 @@
 import csv
-import os
 import threading
 import queue
 import sqlite3
+import resolver
 
-from pathlib import Path
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 producer_queue: queue.Queue[dict] = queue.Queue(maxsize=200)
 writer_queue: queue.Queue[tuple] = queue.Queue(maxsize=200)
@@ -30,6 +32,7 @@ def check_type(type_: str):
 
 def load_event(row: dict):
     if not row or all(not v for v in row.values()):
+        logger.warning("rows is empty")
         return None
     try:
         timestamp_raw = row['timestamp'] if row.get('timestamp') else None
@@ -45,11 +48,9 @@ def load_event(row: dict):
     except (ValueError, TypeError):
         return None
 
-    # Валидация: если event невалиден, отбрасываем строку
     if event is None:
         return None
-    
-    # Валидация: если user_id невалиден, отбрасываем строку
+
     if user_id is None:
         return None
 
@@ -58,9 +59,15 @@ def load_event(row: dict):
 
 def producer(csv_path :str):
     with open(csv_path, "r", encoding="utf-8") as file:
+        logger.info(f"Opening CSV file: {csv_path}")
         reader = csv.DictReader(file)
+        row_count = 0
         for row in reader:
             producer_queue.put(row)
+            row_count += 1
+            if row_count % 1000 == 0:
+                logger.info(f"Read {row_count} rows from CSV")
+        logger.info(f"Finished reading CSV: {row_count} total rows")
 
 def worker():
     while True:
@@ -83,19 +90,23 @@ def writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA synchronous=OFF;")
 
+    logger.info("connecting to db")
+
     sql = """
         INSERT OR IGNORE INTO events (timestamp, event, type, user_id)
-        VALUES (?, ?, ?, ?)
+    total_inserted = 0
     """
 
     batch = []
     seen = 0
+    count = 0
 
     def flush():
         if not batch:
             return
         with conn:
             conn.executemany(sql, batch)
+            logger.debug("Inserted batch")
             batch.clear()
 
     try:
@@ -117,7 +128,8 @@ def writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
     finally:
         conn.close()
 
-def run(csv_path: str, db_path: str, batch_size: int = 100, workers_count: int = 1):
+def run(csv_path: str, db_path: str, workers_count: int = 1, batch_size: int = 100):
+    logger.info("Starting loader pipeline")
     write = threading.Thread(target=writer, args=(db_path, batch_size, workers_count), daemon=True)
     write.start()
 
@@ -140,18 +152,6 @@ def run(csv_path: str, db_path: str, batch_size: int = 100, workers_count: int =
 
     write.join()
 
-def resolve_paths():
-    root = Path(__file__).resolve().parent.parent
-
-    default_csv_path = root / "data" / "toolwindow_data.csv"
-    default_db_path = root / "database" / "toolwindow.db"
-
-    csv_path = Path(os.getenv("CSV_PATH", str(default_csv_path)))
-    db_path = Path(os.getenv("DB_PATH", str(default_db_path)))
-
-    return str(csv_path), str(db_path)
-
 if __name__ == '__main__':
-    csv_path, db_path = resolve_paths()
-
-    run(csv_path, db_path, 50, 4)
+    run(resolver.csv_path(), resolver.db_path(), resolver.workers_count(), resolver.batch_size())
+    logger.info("Finished loader pipeline")

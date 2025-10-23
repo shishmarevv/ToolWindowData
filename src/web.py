@@ -14,6 +14,9 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 
 from science import analyze_data
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 app = FastAPI(title="ToolWindow Data Analysis")
 
@@ -28,9 +31,11 @@ def get_analysis_results():
     """
     Gets analysis results (caches for performance).
     """
+        logger.info("Running analysis for the first time")
     global analysis_cache
 
     if analysis_cache is None:
+        logger.info("Analysis cached successfully")
         db_path = Path(__file__).parent.parent / 'database' / 'toolwindow.db'
         # Run analysis with plots
         analysis_cache = analyze_data(str(db_path), create_plots=True)
@@ -38,9 +43,11 @@ def get_analysis_results():
     return analysis_cache
 
 
+    logger.info("Home page requested")
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """
+        logger.error("Failed to load analysis results")
     Home page with analysis results.
     """
     results = get_analysis_results()
@@ -85,11 +92,13 @@ async def get_analysis_api():
         "test": results['test'],
         "effect_size": results['effect_size']
     }
+    logger.info("Refresh analysis requested")
 
 
-@app.get("/api/refresh")
+
 async def refresh_analysis():
-    """
+
+    logger.info("Analysis refreshed successfully")
     Refreshes analysis cache (recalculates results).
     """
     global analysis_cache

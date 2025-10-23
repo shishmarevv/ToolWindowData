@@ -1,9 +1,11 @@
-import os
 import threading
 import queue
 import sqlite3
+import resolver
 
-from pathlib import Path
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 producer_queue = queue.Queue(maxsize=200)
 clean_consumer_queue = queue.Queue(maxsize=200)
@@ -90,11 +92,10 @@ def check_events(events: list, max_duration: int):
                 elif timestamp > open_ts:
                     # Calculate duration in hours
                     duration_ms = timestamp - open_ts
-                    duration_hours = duration_ms / 1000 / 60 / 60
+                    duration = duration_ms / 1000 / 60
 
-                    # Filter episodes longer than 12 hours as anomalies
-                    if duration_hours > max_duration:
-                        anomalies.append((open_type, open_ts, open_id, event_id, '>12h_duration'))
+                    if duration > max_duration:
+                        anomalies.append((open_type, open_ts, open_id, event_id, '>duration'))
                     else:
                         clean.append((open_type, open_ts, timestamp, open_id, event_id))
                     state = None
@@ -216,15 +217,17 @@ def anomaly_writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
         conn.close()
 
 def truncate(db_path: str):
-    with sqlite3.connect(db_path) as conn:
-        sql = "DELETE FROM clear"
-        conn.execute(sql)
-        sql = "DELETE FROM anomaly"
-        conn.execute(sql)
-        conn.close()
+    conn = sqlite3.connect(db_path)
+    sql = "DELETE FROM clear"
+    conn.execute(sql)
+    sql = "DELETE FROM anomaly"
+    conn.execute(sql)
+    conn.close()
 
-def run(db_path: str, workers_count: int = 1, user_batch: int = 100, batch_size: int = 100):
+def run(db_path: str, max_duration: int,  workers_count: int = 1, user_batch: int = 100, batch_size: int = 100):
+    logger.info(f"Starting data cleaning: workers={workers_count}, max_duration={max_duration}min, batch_size={batch_size}")
     truncate(db_path)
+    logger.info("Truncated clear and anomaly tables")
     t_clear = threading.Thread(
         target=clear_writer,
         args=(db_path, batch_size, workers_count),
@@ -239,7 +242,6 @@ def run(db_path: str, workers_count: int = 1, user_batch: int = 100, batch_size:
         )
     t_anom.start()
 
-    max_duration = resolve_max_duration()
     workers = []
     for _ in range(workers_count):
         t = threading.Thread(target=worker, args=(db_path,max_duration), daemon=True)
@@ -257,25 +259,13 @@ def run(db_path: str, workers_count: int = 1, user_batch: int = 100, batch_size:
 
     for t in workers:
         t.join()
+
+    logger.info("Data cleaning completed")
     t_clear.join()
     t_anom.join()
 
-def resolve_path():
-    root = Path(__file__).resolve().parent.parent
 
-    default_db_path = root / "database" / "toolwindow.db"
-
-    db_path = Path(os.getenv("DB_PATH", str(default_db_path)))
-
-    return str(db_path)
-
-def resolve_max_duration():
-    default_max_duration = 12
-
-    max_duration = int(os.getenv("MAX_DURATION", default_max_duration))
-
-    return max_duration
 
 if __name__ == '__main__':
-    db_path = resolve_path()
-    run(db_path, 3, 5, 50)
+    run(resolver.db_path(), resolver.max_duration(), resolver.workers_count(), resolver.user_batch_size(), resolver.batch_size())
+    logger.info("Janitor pipeline finished")
