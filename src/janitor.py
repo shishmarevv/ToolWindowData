@@ -44,7 +44,7 @@ def get_events(db_path: str, user_id: int):
         rows = cur.fetchall()
         return rows
 
-def check_events(events: list):
+def check_events(events: list, max_duration: int):
     clean = []
     anomalies = []
 
@@ -93,7 +93,7 @@ def check_events(events: list):
                     duration_hours = duration_ms / 1000 / 60 / 60
 
                     # Filter episodes longer than 12 hours as anomalies
-                    if duration_hours > 12:
+                    if duration_hours > max_duration:
                         anomalies.append((open_type, open_ts, open_id, event_id, '>12h_duration'))
                     else:
                         clean.append((open_type, open_ts, timestamp, open_id, event_id))
@@ -115,7 +115,7 @@ def producer(db_path: str, batch: int = 100):
     for users in get_users(db_path, batch):
         producer_queue.put(users)
 
-def worker(db_path: str):
+def worker(db_path: str, max_duration: int):
     while True:
         item = producer_queue.get()
         try:
@@ -128,7 +128,7 @@ def worker(db_path: str):
                 rows = get_events(db_path, user_id)
                 if not rows:
                     continue
-                clean, anomalies = check_events(rows)
+                clean, anomalies = check_events(rows, max_duration)
                 for rec in clean:
                     clean_consumer_queue.put(rec)
                 for rec in anomalies:
@@ -215,7 +215,16 @@ def anomaly_writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
     finally:
         conn.close()
 
+def truncate(db_path: str):
+    with sqlite3.connect(db_path) as conn:
+        sql = "DELETE FROM clear"
+        conn.execute(sql)
+        sql = "DELETE FROM anomaly"
+        conn.execute(sql)
+        conn.close()
+
 def run(db_path: str, workers_count: int = 1, user_batch: int = 100, batch_size: int = 100):
+    truncate(db_path)
     t_clear = threading.Thread(
         target=clear_writer,
         args=(db_path, batch_size, workers_count),
@@ -230,9 +239,10 @@ def run(db_path: str, workers_count: int = 1, user_batch: int = 100, batch_size:
         )
     t_anom.start()
 
+    max_duration = resolve_max_duration()
     workers = []
     for _ in range(workers_count):
-        t = threading.Thread(target=worker, args=(db_path,), daemon=True)
+        t = threading.Thread(target=worker, args=(db_path,max_duration), daemon=True)
         t.start()
         workers.append(t)
 
@@ -258,6 +268,13 @@ def resolve_path():
     db_path = Path(os.getenv("DB_PATH", str(default_db_path)))
 
     return str(db_path)
+
+def resolve_max_duration():
+    default_max_duration = 12
+
+    max_duration = int(os.getenv("MAX_DURATION", default_max_duration))
+
+    return max_duration
 
 if __name__ == '__main__':
     db_path = resolve_path()
