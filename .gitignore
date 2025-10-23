@@ -209,6 +209,7 @@ __marimo__/
 #copilot instructions
 copilot-instructions.md
 task.md
+context.md
 
 #.csv
 *.csv
