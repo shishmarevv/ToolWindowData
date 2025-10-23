@@ -105,6 +105,7 @@ def writer(db_path: str, batch_size: int = 100, workers_count: int = 1):
                     flush()
             finally:
                 writer_queue.task_done()
+        flush()
     finally:
         conn.close()
 
@@ -140,9 +141,9 @@ def resolve_paths():
     csv_path = Path(os.getenv("CSV_PATH", str(default_csv_path)))
     db_path = Path(os.getenv("DB_PATH", str(default_db_path)))
 
-    return csv_path, db_path
+    return str(csv_path), str(db_path)
 
 if __name__ == '__main__':
     csv_path, db_path = resolve_paths()
 
-    run(str(csv_path), str(db_path), 100, 4)
+    run(csv_path, db_path, 50, 4)

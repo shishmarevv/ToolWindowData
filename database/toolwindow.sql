@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS anomaly (
     detail TEXT NOT NULL CHECK ( detail IN ('missing_close',
                                             'missing_open',
                                             'null_type',
+                                            'closed_not_null_type',
                                             'duplicate_open',
                                             'duplicate_close',
                                             'negative_duration',
@@ -47,5 +48,20 @@ CREATE INDEX IF NOT EXISTS idx_clear_start ON clear(start);
 
 CREATE INDEX IF NOT EXISTS idx_anomaly_timestamp ON anomaly(timestamp);
 CREATE INDEX IF NOT EXISTS idx_anomaly_detail_timestamp ON anomaly(detail, timestamp);
+
+-- Support per-user ordered scans
+CREATE INDEX IF NOT EXISTS idx_events_user_ts_id ON events(user_id, timestamp, id);
+
+-- Ensure idempotency for episodes: each (open_event_id, close_event_id) pair only once
+CREATE UNIQUE INDEX IF NOT EXISTS ux_clear_pair ON clear(open_event_id, close_event_id);
+
+-- Ensure idempotency for anomalies with and without counterparty
+CREATE UNIQUE INDEX IF NOT EXISTS ux_anomaly_unique_null
+ON anomaly(event_id, detail)
+WHERE counterparty_event_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_anomaly_unique_counterparty
+ON anomaly(event_id, counterparty_event_id, detail)
+WHERE counterparty_event_id IS NOT NULL;
 
 COMMIT;
