@@ -45,6 +45,14 @@ def load_event(row: dict):
     except (ValueError, TypeError):
         return None
 
+    # Валидация: если event невалиден, отбрасываем строку
+    if event is None:
+        return None
+
+    # Валидация: если user_id невалиден, отбрасываем строку
+    if user_id is None:
+        return None
+
     result = (timestamp, event, type_, user_id)
     return result
 
