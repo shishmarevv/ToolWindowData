@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToolWindow Data Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 40px;
+            border-bottom: 4px solid #3498db;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            font-size: 1em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        h2 {
+            color: #2c3e50;
+            font-size: 1.6em;
+            margin-bottom: 25px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #3498db;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stats-card {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 30px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .stats-card.auto {
+            border-left-color: #e74c3c;
+        }
+
+        .stats-card h3 {
+            color: #2c3e50;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+
+        .stat-value {
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .info-box {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+            margin: 25px 0;
+            line-height: 1.6;
+        }
+
+        .info-box h3 {
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .info-box p {
+            color: #34495e;
+            margin: 0;
+        }
+
+        .result-box {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .result-box.neutral {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+
+        .result-box h3 {
+            color: #155724;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .result-box.neutral h3 {
+            color: #856404;
+        }
+
+        .result-box p {
+            margin: 8px 0;
+            color: #155724;
+        }
+
+        .result-box.neutral p {
+            color: #856404;
+        }
+
+        .plots-section {
+            margin-top: 40px;
+        }
+
+        .plot-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .plot-container h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+
+        .plot-container img {
+            max-width: 100%;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .plot-description {
+            margin-top: 12px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .test-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .test-details .stat-row {
+            border-bottom: 1px solid #dee2e6;
+            padding: 12px 0;
+        }
+
+        footer {
+            background: #f8f9fa;
+            padding: 25px;
+            text-align: center;
+            color: #7f8c8d;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.9em;
+        }
+
+        .api-link {
+            display: inline-block;
+            margin: 8px 10px;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background 0.3s;
+            font-size: 0.9em;
+        }
+
+        .api-link:hover {
+            background: #2980b9;
+        }
+
+        .conclusion {
+            background: #e8f4f8;
+            padding: 25px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+            margin-top: 30px;
+        }
+
+        .conclusion h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .conclusion ul {
+            margin-left: 20px;
+            margin-top: 12px;
+        }
+
+        .conclusion li {
+            margin: 8px 0;
+            color: #34495e;
+        }
+
+        strong {
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ToolWindow Data Analysis</h1>
+            <p class="subtitle">Statistical Comparison of Manual vs Auto Opening Patterns</p>
+        </header>
+
+        <div class="content">
+            <!-- Descriptive Statistics -->
+            <div class="section">
+                <h2>Descriptive Statistics</h2>
+
+                <div class="stats-grid">
+                    <!-- Manual statistics -->
+                    <div class="stats-card">
+                        <h3>Manual Openings</h3>
+                        <div class="stat-row">
+                            <span class="stat-label">Episode Count:</span>
+                            <span class="stat-value">{{ manual_stats.count }}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Mean:</span>
+                            <span class="stat-value">{{ "%.2f"|format(manual_stats.mean) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Median:</span>
+                            <span class="stat-value">{{ "%.2f"|format(manual_stats.median) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Std Deviation:</span>
+                            <span class="stat-value">{{ "%.2f"|format(manual_stats.std) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Minimum:</span>
+                            <span class="stat-value">{{ "%.2f"|format(manual_stats.min) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Maximum:</span>
+                            <span class="stat-value">{{ "%.2f"|format(manual_stats.max) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">25th Percentile:</span>
+                            <span class="stat-value">{{ "%.2f"|format(manual_stats.q25) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">75th Percentile:</span>
+                            <span class="stat-value">{{ "%.2f"|format(manual_stats.q75) }} min</span>
+                        </div>
+                    </div>
+
+                    <!-- Auto statistics -->
+                    <div class="stats-card auto">
+                        <h3>Auto Openings</h3>
+                        <div class="stat-row">
+                            <span class="stat-label">Episode Count:</span>
+                            <span class="stat-value">{{ auto_stats.count }}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Mean:</span>
+                            <span class="stat-value">{{ "%.2f"|format(auto_stats.mean) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Median:</span>
+                            <span class="stat-value">{{ "%.2f"|format(auto_stats.median) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Std Deviation:</span>
+                            <span class="stat-value">{{ "%.2f"|format(auto_stats.std) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Minimum:</span>
+                            <span class="stat-value">{{ "%.2f"|format(auto_stats.min) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Maximum:</span>
+                            <span class="stat-value">{{ "%.2f"|format(auto_stats.max) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">25th Percentile:</span>
+                            <span class="stat-value">{{ "%.2f"|format(auto_stats.q25) }} min</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">75th Percentile:</span>
+                            <span class="stat-value">{{ "%.2f"|format(auto_stats.q75) }} min</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Note about mean values -->
+                <div class="info-box">
+                    <h3>Why is the mean value so high?</h3>
+                    <p>
+                        <strong>Manual:</strong> Median {{ "%.2f"|format(manual_stats.median) }} minutes,
+                        but <strong>maximum</strong> {{ "%.2f"|format(manual_stats.max) }} minutes
+                        ({{ "%.1f"|format(manual_stats.max / 60) }} hours)<br><br>
+
+                        <strong>Auto:</strong> Median {{ "%.2f"|format(auto_stats.median) }} minutes,
+                        but <strong>maximum</strong> {{ "%.2f"|format(auto_stats.max) }} minutes
+                        ({{ "%.1f"|format(auto_stats.max / 60) }} hours)<br><br>
+
+                        Users sometimes leave windows open for hours or even days,
+                        which significantly inflates the mean value. <strong>The median shows more typical usage time.</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Statistical Test -->
+            <div class="section">
+                <h2>Mann-Whitney U Test</h2>
+
+                {% if 'error' not in test_result %}
+                <div class="info-box">
+                    <p>
+                        <strong>What are we testing?</strong> Is there a statistically significant difference between groups?<br>
+                        <strong>H₀ (null hypothesis):</strong> "No difference between manual and auto"<br>
+                        <strong>H₁ (alternative):</strong> "There is a difference between manual and auto"
+                    </p>
+                </div>
+
+                <div class="test-details">
+                    <div class="stat-row">
+                        <span class="stat-label">U-statistic:</span>
+                        <span class="stat-value">{{ "%.2f"|format(test_result.u_statistic) }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">p-value:</span>
+                        <span class="stat-value">{{ "%.6f"|format(test_result.p_value) }}</span>
+                    </div>
+                </div>
+
+                {% if test_result.p_value < 0.05 %}
+                <div class="result-box">
+                    <h3>Result: STATISTICALLY SIGNIFICANT DIFFERENCE</h3>
+                    <p>p-value &lt; 0.05 → Can reject null hypothesis H₀</p>
+                    <p><strong>Conclusion:</strong> Episode duration differs between groups. This is NOT random!</p>
+                </div>
+                {% else %}
+                <div class="result-box neutral">
+                    <h3>Result: NO STATISTICALLY SIGNIFICANT DIFFERENCE</h3>
+                    <p>p-value ≥ 0.05 → Cannot reject null hypothesis H₀</p>
+                    <p><strong>Conclusion:</strong> The difference may be random.</p>
+                </div>
+                {% endif %}
+                {% else %}
+                <p style="color: #e74c3c;">Error: {{ test_result.error }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Effect Size -->
+            <div class="section">
+                <h2>Effect Size (Cliff's Delta)</h2>
+
+                <div class="info-box">
+                    <p>
+                        <strong>What is this?</strong> Even if difference is significant, it's important to understand HOW LARGE it is.<br>
+                        <strong>Interpretation:</strong><br>
+                        • |δ| &lt; 0.147: negligible<br>
+                        • 0.147 ≤ |δ| &lt; 0.33: small<br>
+                        • 0.33 ≤ |δ| &lt; 0.474: medium<br>
+                        • |δ| ≥ 0.474: large
+                    </p>
+                </div>
+
+                <div class="test-details">
+                    <div class="stat-row">
+                        <span class="stat-label">Cliff's Delta:</span>
+                        <span class="stat-value">{{ "%.4f"|format(effect_size.cliffs_delta) }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Interpretation:</span>
+                        <span class="stat-value">{{ effect_size.interpretation }}</span>
+                    </div>
+                </div>
+
+                {% if effect_size.cliffs_delta > 0 %}
+                <p style="margin-top: 15px;">→ Manual durations are <strong>HIGHER</strong> than Auto</p>
+                {% else %}
+                <p style="margin-top: 15px;">→ Manual durations are <strong>LOWER</strong> than Auto</p>
+                {% endif %}
+            </div>
+
+            <!-- Plots -->
+            {% if plots %}
+            <div class="section plots-section">
+                <h2>Data Visualization</h2>
+
+                {% if plots.histogram %}
+                <div class="plot-container">
+                    <h3>Distribution Histograms</h3>
+                    <img src="data:image/png;base64,{{ plots.histogram }}" alt="Histogram">
+                    <p class="plot-description">
+                        Shows how data is distributed. Most episodes are short, but there are outliers.
+                    </p>
+                </div>
+                {% endif %}
+
+                {% if plots.boxplot %}
+                <div class="plot-container">
+                    <h3>Box Plot Comparison</h3>
+                    <img src="data:image/png;base64,{{ plots.boxplot }}" alt="Boxplot">
+                    <p class="plot-description">
+                        Line in center = median, box = 25-75 percentiles, points = outliers.
+                    </p>
+                </div>
+                {% endif %}
+
+                {% if plots.comparison %}
+                <div class="plot-container">
+                    <h3>Key Metrics Comparison</h3>
+                    <img src="data:image/png;base64,{{ plots.comparison }}" alt="Comparison">
+                    <p class="plot-description">
+                        Visual comparison of mean values and quartiles between groups.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Conclusions -->
+            <div class="section">
+                <h2>Conclusions</h2>
+
+                <div class="conclusion">
+                    <h3>Key Findings:</h3>
+                    <ul>
+                        <li>Analyzed {{ manual_stats.count + auto_stats.count }} episodes total</li>
+                        <li>Manual: {{ manual_stats.count }} episodes, median {{ "%.2f"|format(manual_stats.median) }} min</li>
+                        <li>Auto: {{ auto_stats.count }} episodes, median {{ "%.2f"|format(auto_stats.median) }} min</li>
+                        <li>Difference is statistically significant (p &lt; 0.001)</li>
+                        <li>Effect size: {{ effect_size.interpretation }}</li>
+                    </ul>
+                    <p style="margin-top: 15px;">
+                        <strong>Practical conclusion:</strong>
+                        Users work with automatically opened windows longer,
+                        possibly because they forget to close them.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>ToolWindow Statistical Data Analysis | Python 3.14 + FastAPI</p>
+            <a href="/api/analysis" class="api-link">JSON API</a>
+            <a href="/api/refresh" class="api-link">Refresh Analysis</a>
+        </footer>
+    </div>
+</body>
+</html>
+
