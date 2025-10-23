@@ -61,5 +61,3 @@ WHERE counterparty_event_id IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_anomaly_unique_counterparty
 ON anomaly(event_id, counterparty_event_id, detail)
 WHERE counterparty_event_id IS NOT NULL;
-
-COMMIT;
