@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Initialize database
+  init-db:
+    image: alpine:3.19
+    container_name: toolwindow_init_db
+    working_dir: /app
+    volumes:
+      - ./database:/app/database
+    command: >
+      sh -c "
+        apk add --no-cache sqlite &&
+        rm -f /app/database/toolwindow.db &&
+        sqlite3 /app/database/toolwindow.db < /app/database/toolwindow.sql &&
+        echo 'Database initialized successfully'
+      "
+
+  # Analysis pipeline
+  analysis:
+    build: .
+    container_name: toolwindow_analysis
+    depends_on:
+      init-db:
+        condition: service_completed_successfully
+    volumes:
+      - ./data:/app/data:ro
+      - ./database:/app/database
+      - ./plots:/app/plots
+    environment:
+      - CSV_PATH=${CSV_PATH:-/app/data/toolwindow_data.csv}
+      - DB_PATH=/app/database/toolwindow.db
+      - MAX_DURATION=${MAX_DURATION:-720}
+      - WORKERS_COUNT=${WORKERS_COUNT:-4}
+      - USER_BATCH_SIZE=${USER_BATCH_SIZE:-100}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+  # Web dashboard
+  web:
+    build: .
+    container_name: toolwindow_web
+    command: uvicorn src.web:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./database:/app/database
+      - ./plots:/app/plots:ro
+    depends_on:
+      analysis:
+        condition: service_completed_successfully
+    environment:
+      - DB_PATH=/app/database/toolwindow.db
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    restart: unless-stopped
+
