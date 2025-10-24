@@ -349,23 +349,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Note about mean values -->
-                <div class="info-box">
-                    <h3>Why is the mean value so high?</h3>
-                    <p>
-                        <strong>Manual:</strong> Median {{ "%.2f"|format(manual_stats.median) }} minutes,
-                        but <strong>maximum</strong> {{ "%.2f"|format(manual_stats.max) }} minutes
-                        ({{ "%.1f"|format(manual_stats.max / 60) }} hours)<br><br>
-
-                        <strong>Auto:</strong> Median {{ "%.2f"|format(auto_stats.median) }} minutes,
-                        but <strong>maximum</strong> {{ "%.2f"|format(auto_stats.max) }} minutes
-                        ({{ "%.1f"|format(auto_stats.max / 60) }} hours)<br><br>
-
-                        Users sometimes leave windows open for hours or even days,
-                        which significantly inflates the mean value. <strong>The median shows more typical usage time.</strong>
-                    </p>
-                </div>
             </div>
 
             <!-- Statistical Test -->
@@ -479,27 +462,6 @@
                 {% endif %}
             </div>
             {% endif %}
-
-            <!-- Conclusions -->
-            <div class="section">
-                <h2>Conclusions</h2>
-
-                <div class="conclusion">
-                    <h3>Key Findings:</h3>
-                    <ul>
-                        <li>Analyzed {{ manual_stats.count + auto_stats.count }} episodes total</li>
-                        <li>Manual: {{ manual_stats.count }} episodes, median {{ "%.2f"|format(manual_stats.median) }} min</li>
-                        <li>Auto: {{ auto_stats.count }} episodes, median {{ "%.2f"|format(auto_stats.median) }} min</li>
-                        <li>Difference is statistically significant (p &lt; 0.001)</li>
-                        <li>Effect size: {{ effect_size.interpretation }}</li>
-                    </ul>
-                    <p style="margin-top: 15px;">
-                        <strong>Practical conclusion:</strong>
-                        Users work with automatically opened windows longer,
-                        possibly because they forget to close them.
-                    </p>
-                </div>
-            </div>
         </div>
 
         <footer>
