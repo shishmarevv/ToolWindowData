@@ -24,6 +24,7 @@ web:
 	docker-compose up -d web
 
 all:
+	docker-compose build
 	docker-compose up init-db analysis
 	docker-compose up -d web
 
